@@ -8,7 +8,7 @@
 
     <div id="views">
 
-      <section class="cart ui-form">
+      <section class="cart ui-form" @click.stop>
         <div class="cart-panel">
 
           <!--购物车如果没有数据则显示-->
@@ -21,126 +21,231 @@
           </div>
 
           <!--购物车如果有数据则渲染回调数据列表-->
-          <div class="ui-panel" v-else>
+          <div class="ui-panel" v-else v-for="panel in result.shopGroup">
 
+            <!--标题-->
             <h3 class="ui-panel-hd">
-              <input type="checkbox" class="ui-checkbox c-shop" id="c-s-1obo4o">
-              <label for="c-s-1obo4o">卡优尔</label>
-              <img src="http://s17.mogucdn.com/p1/150923/upload_ieztomzrmeydmmlegmzdambqgyyde_147x23.png" class="shopRalatedTag">
+              <input type="checkbox" class="ui-checkbox c-shop" v-model="panel.selected"  @click="selectShop(panel)">
+              <label for="c-s-{{panel.shopInfo.shopIdEsc}}">{{panel.shopInfo.shopName}}</label>
+              <img data-type="{{panel.shopRelatedTagBlock.globleCouponTag.type}}" :src="panel.shopRelatedTagBlock.globleCouponTag.image" class="shopRalatedTag">
             </h3>
+
             <div class="ui-panel-bd">
               <ul class="ui-list cart-goods">
 
-                <li class="ui-list-item " data-unit="3430" data-save="1470" data-stockid="15s7rxg" data-min="1" data-max="5124">
+                <li class="ui-list-item " v-for="good in panel.cartItemGroup" data-unit="{{good.sku.nowprice}}" data-save="{{good.disCountFee}}" data-stockid="{{good.sku.stockIdEsc}}" data-min="{{good.number}}" data-max="{{good.sku.stock}}">
                   <a href="http://m.mogujie.com/x6/detail/18ga7x6?ptp_from=m1.PgEo7els._book_shopping_50216_h5-wall-v1_noab-noab_wall_docs.22.TRUVK" class="cart-goods-pic">
-                    <img class="fadeIn" src="http://s18.mogucdn.com/p1/160303/1lqbzf_ie3tkztcmi3wemjrg4zdambqgayde_640x960.jpg_100x100.jpg">
+                    <img class="fadeIn" :src="good.sku.imgUrl">
                   </a>
                   <div class="cart-goods-des">
-                    <h5 class="cart-goods-name">【夏季薄款】韩版休闲高腰显瘦铅笔小脚裤女黑色</h5>
+                    <h5 class="cart-goods-name">{{good.sku.title}}</h5>
                     <p class="cart-goods-sku">  颜色：黑色；  尺码：L；  </p>
                     <div class="cart-goods-counter">
-                      <a href="javascript:;" class="btn-sub ">
+                      <a class="btn-sub" @click="calculation(0, good)">
                         <i class="icon icon-uniE808"></i>
                       </a>
-                      <em class="cart-goods-num">3</em>
-                      <a href="javascript:;" class="btn-add "><i class="icon icon-uniE807"></i></a>
+                      <input type="text" class="cart-goods-num" v-model="good.number"readyonly :value="good.number"/>
+                      <a href="javascript:;" class="btn-add " @click="calculation(1,good,panel)"><i class="icon icon-uniE807"></i></a>
                     </div>
                   </div>
                   <p class="cart-goods-price">
-                    <span class="price-origin">49.00</span>
+                    <span class="price-origin">{{good.sku.price/100|currency ''}}</span>
                     <br>
-                    <span class="price">34.30</span>
+                    <span class="price">{{good.sku.nowprice/100|currency ''}}</span>
                   </p>
-                  <a href="javascript:;" class="cart-goods-dustbin"> <i class="icon icon-uniE803"></i> </a>
-                  <input type="checkbox" class="ui-checkbox c-goods">
+                  <a href="javascript:;" class="cart-goods-dustbin" @click="delGoodEvent(good)"> <i class="icon icon-uniE803"></i> </a>
+                  <input type="checkbox" class="ui-checkbox c-goods" v-model="good.selected" @click="selecteItem(good, panel)">
                   <div>
                   </div>
                 </li>
 
               </ul>
             </div>
-
-
           </div>
-
-
-
         </div>
 
         <div class="cart-checkout" v-if="result.length !=''">
           <div class="cart-checkbox">
-            <input type="checkbox" name="c-all" class="ui-checkbox c-all" id="c-all">
+            <input type="checkbox" name="c-all" class="ui-checkbox c-all" v-model="selecteAllState" @click="selecteAll">
             <label for="c-all">全选</label>
           </div>
           <div class="cart-counter">
             <p class="total-price">
               总计 :
-              <em class="sum">￥0.00</em>
+              <em class="sum">￥{{totalNowPrice/100|currency ''}}</em>
             </p>
-            <p class="total-save">为您节省<span class="save">￥0.00</span></p>
+            <p class="total-save">为您节省<span class="save">￥{{totalPrice/100|currency ''}}</span></p>
           </div>
-          <a href="javascript:;" class="ui-btn ui-btn-pink" @click="setEvent">去结算</a>
+          <a class="ui-btn ui-btn-pink" @click="setEvent">去结算</a>
         </div>
 
       </section>
 
     </div>
-
+    <!--遮罩层组件-->
+    <mask :show="mask"></mask>
+    <!--确认取消组件-->
+    <confirm :confirm="confirm"></confirm>
 
   </div>
 
 
 </template>
 <script>
+
   //加载公用小组件
   import Mask from '../../components/mask.vue'//遮罩层组件
+  import Confirm from '../../components/confirm.vue'//确认取消组件
 
   //加载局部业务组件
   import HeadModule from '../../views/cart/head.vue'//头部组件
 
   export default {
-      data(){
-      return{
-        mask:false,
-        result:"",
-        cartlist:[]
-      }
-    },
-    components: {
-      HeadModule
-    },
-    route: {
-      data(transition){
-        //请求列表全部数据
-        this.getAjax(transition)
-      }
-    },
-    methods: {
-      //请求列表全部数据
-      getAjax(transition){
-        const self = this
-        let successCallback =(json) => {
-          const jsondata = json.data
-          self.$route.router.app.loading = false
-          if(jsondata&&jsondata.status.code==1001){
-
-            //实时异步队列更新数据
-            transition.next({
-              result:jsondata.result
-             // cartlist:jsondata.data.shopGroup
-            })
-
+      data () {
+        return {
+          mask:false,
+          confirm:{
+            show:false,
+            text:'',
+            confirm () {},
+            cancel () {}
+          },
+          result:[],
+          selecteAllState: false,
+          cartlist:[],
+          total:{
+            price:0,
+            nowprice:0
           }
         }
-        let errorCallback = (json) => {
-          //console.log(json)
-        }
-        self.$http.get('../../src/mock/cart/list.json').then(successCallback, errorCallback)
       },
-      //结算按钮
-      setEvent(){
+      components: {
+        HeadModule,Mask,Confirm
+      },
+      computed: {
+        totalPrice () {
+          let price = 0
+          this.result.shopGroup.forEach(shop => {
+            shop.cartItemGroup.forEach(item => {
+              if (item['selected']) {
+                price += item.number * item.sku.nowprice
+              }
+            })
+          })
+          return price
+        },
+        totalNowPrice () {
+          let price = 0
+          this.result.shopGroup.forEach(shop => {
+            shop.cartItemGroup.forEach(item => {
+              if (item['selected']) {
+                price += item.number * item.sku.price
+              }
+            })
+          })
+          return price
+        }
+      },
+      route: {
+        data(transition){
+          //请求列表全部数据
+          this.getAjax(transition)
+        }
+      },
+      methods: {
+        createConfirm (text, confirm, cancel) {
+          this.confirm.show = true
+          this.confirm.text = text
+          this.confirm.confirm = confirm
+          this.confirm.cancel = cancel
+        },
+        closeConfirm () {
+          this.confirm.show = false
+          this.confirm.text = ''
+          this.confirm.confirm = () => {}
+          this.confirm.cancel = () => {}
+        },
+        selecteItem (item, shop) {
+          item.selected = !item.selected
+          this.checkSelect()
+        },
+        checkSelect () {
+          let allSelected = true
+          this.result.shopGroup.forEach(shop => {
+            let shopSelectAll = true
+            shop.cartItemGroup.forEach(item => {
+              if (!item['selected']) {
+                shopSelectAll = false
+                allSelected = false
+              }
+            })
+            shop.selected = shopSelectAll
+          })
+          this.selecteAllState = allSelected
+        },
+        selectShop (shop) {
+          shop.selected = !shop.selected
+          shop.cartItemGroup.forEach(item => {
+            item['selected'] = shop.selected
+          })
+          this.checkSelect()
+        },
+        selecteAll () {
+          this.selecteAllState = !this.selecteAllState
+          this.result.shopGroup.forEach(shop => {
+            shop.selected = this.selecteAllState
+            shop.cartItemGroup.forEach(item => {
+              item['selected'] = this.selecteAllState
+            })
+          })
+        },
+        //请求列表全部数据
+        getAjax (transition) {
+          this.$http.get('../../src/mock/cart/list.json')
+          .then(response => {
+            let json = response.data
+            this.$route.router.app.loading = false
 
+            if (json && json.status.code === 1001) {
+              let result = json.result
+              result.shopGroup.forEach(shop => {
+                shop['selected'] = false
+                shop.cartItemGroup.map(item => {
+                  item['selected'] = false
+                })
+              })
+              // 实时异步队列更新数据
+              transition.next({
+                result: result
+               // cartlist:jsondata.data.shopGroup
+              })
+            }
+          })
+          .catch(err => {
+            console.log(err)
+          })
+        },
+        //删除商品
+        delGoodEvent(obj){
+          this.createConfirm('确定要删除这个商品吗', this.opencallback)
+        },
+        //结算按钮
+        setEvent(){
+
+        },
+        //确定删除callback
+        opencallback(){
+           this.$http.get('../../src/mock/cart/list.json')
+            .then(response => {
+              const json = response.data
+              if(json&&json.status.code==1001){
+                this.closeConfirm()
+              }
+           })
+            .catch(response => {
+              console.log(response)
+           })
+        }
       }
-    }
   }
 </script>
