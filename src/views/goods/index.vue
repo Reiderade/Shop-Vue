@@ -7,11 +7,15 @@
     <mask :show="mask"></mask>
 
     <!--顶部页面组件-->
-    <top-module></top-module>
+    <div id="BP_top" style="padding-top: 1.1rem">
+      <a href="http://www.mogujie.com/mage/jump/go?link=http%3a%2f%2fa.app.qq.com%2fo%2fsimple.jsp%3fpkgname%3dcom.mogujie%26ckey%3dCK1297357065611&amp;mt=10.182.r9828" class="swipe_wrap_a">
+        <img src="http://moguimg.u.qiniudn.com/p1/160427/idid_ifrweytegu4tmzbshazdambqhayde_750x162.gif" width="100%" height="auto">
+      </a>
+    </div>
     <!--头部组件-->
     <head-module></head-module>
     <!--内容页面组件-->
-    <views-module></views-module>
+    <views-module :goodsdata="goodsdata"></views-module>
 
   </div>
 
@@ -25,7 +29,6 @@
 
   //加载局部业务组件
   import HeadModule from '../../views/goods/head.vue'//头部组件
-  import TopModule from '../../views/goods/top.vue'//顶部页面组件
   import ViewsModule from '../../views/goods/views.vue'//内容页面组件
 
   export default {
@@ -36,54 +39,39 @@
           show:false,
           list:[]
         },
-        goodsData:{
-          title:""
-        }
+        goodsdata:""
       }
     },
     components: {
-      HeadModule,Menuleft,Mask,TopModule,ViewsModule
+      HeadModule,Menuleft,Mask,ViewsModule
     },
     route: {
       data(transition){
-        const  _self = this
-        _self.goodsData.title = transition.to.params.title
-
+        const self = this
         //请求列表全部数据
-        _self.getAjax(transition)
-
-        document.addEventListener("click",function(e){
-          //关闭加入购物车
-          _self.menu.show = false;
-          _self.mask = false;
-        })
+        self.getAjax(transition)
       }
     },
     methods: {
       //请求列表全部数据
       getAjax(transition){
-        const _self = this
-
+        const self = this
+        const mt = transition.to.params.mt
         let successCallback =(json) => {
-
-          _self.$route.router.app.loading = false
+          const jsondata = json.data
+          self.$route.router.app.loading = false
+          if(jsondata&&jsondata.code==0){
+            //实时异步队列更新数据
+            transition.next({
+                goodsdata:jsondata.data
+            })
+          }
 
         }
-
         let errorCallback = (json)=> {
           //console.log(json)
         }
-
-        let data = {
-          id:'001'
-        }
-
-        let options ={
-          name:'lei'
-        }
-
-        _self.$http.get('../../src/mock/home.json', [data]).then(successCallback, errorCallback)
-
+        self.$http.get('../../src/mock/goods/goodslist.json?mt='+ mt).then(successCallback, errorCallback)
       }
     }
   }
