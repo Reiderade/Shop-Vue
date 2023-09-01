@@ -3,8 +3,13 @@
 
   <div class="ui-app with-header">
 
-    <!--头部组件-->
-    <head-module></head-module>
+    <header class="ui-head-bar">
+      <a class="arr" href="javascript:void(history.back());">
+        <i class="icon-back"></i>
+      </a>
+      <p class="title">购物车</p>
+      <span class="badge icon-uniE810 badge-car" v-link="{name:'cart'}"></span>
+    </header>
 
     <div id="views">
 
@@ -41,11 +46,11 @@
                     <h5 class="cart-goods-name">{{good.sku.title}}</h5>
                     <p class="cart-goods-sku">  颜色：黑色；  尺码：L；  </p>
                     <div class="cart-goods-counter">
-                      <a class="btn-sub" @click="calculation(0, good)">
+                      <a class="btn-sub" @click="calcitemNum(-1, good)">
                         <i class="icon icon-uniE808"></i>
                       </a>
-                      <input type="text" class="cart-goods-num" v-model="good.number"readyonly :value="good.number"/>
-                      <a href="javascript:;" class="btn-add " @click="calculation(1,good,panel)"><i class="icon icon-uniE807"></i></a>
+                      <input type="text" class="cart-goods-num" v-model="good.number" readyonly/>
+                      <a href="javascript:;" class="btn-add " @click="calcitemNum(1, good)"><i class="icon icon-uniE807"></i></a>
                     </div>
                   </div>
                   <p class="cart-goods-price">
@@ -53,8 +58,8 @@
                     <br>
                     <span class="price">{{good.sku.nowprice/100|currency ''}}</span>
                   </p>
-                  <a href="javascript:;" class="cart-goods-dustbin" @click="delGoodEvent(good)"> <i class="icon icon-uniE803"></i> </a>
-                  <input type="checkbox" class="ui-checkbox c-goods" v-model="good.selected" @click="selecteItem(good, panel)">
+                  <a class="cart-goods-dustbin" @click="delGoodEvent(good, panel.cartItemGroup)"> <i class="icon icon-uniE803"></i> </a>
+                  <input type="checkbox" class="ui-checkbox c-goods" v-model="good.selected" @click="selecteItem(good)">
                   <div>
                   </div>
                 </li>
@@ -97,9 +102,6 @@
   import Mask from '../../components/mask.vue'//遮罩层组件
   import Confirm from '../../components/confirm.vue'//确认取消组件
 
-  //加载局部业务组件
-  import HeadModule from '../../views/cart/head.vue'//头部组件
-
   export default {
       data () {
         return {
@@ -120,7 +122,7 @@
         }
       },
       components: {
-        HeadModule,Mask,Confirm
+        Mask,Confirm
       },
       computed: {
         totalPrice () {
@@ -128,7 +130,7 @@
           this.result.shopGroup.forEach(shop => {
             shop.cartItemGroup.forEach(item => {
               if (item['selected']) {
-                price += item.number * item.sku.nowprice
+                price += item.number * item.sku.price
               }
             })
           })
@@ -139,7 +141,7 @@
           this.result.shopGroup.forEach(shop => {
             shop.cartItemGroup.forEach(item => {
               if (item['selected']) {
-                price += item.number * item.sku.price
+                price += item.number * item.sku.nowprice
               }
             })
           })
@@ -199,9 +201,21 @@
             })
           })
         },
+        calcitemNum (step, obj) {
+          //item.number += Math.floor(step)
+          if(step == -1){
+              if(obj.number <= obj.sku.stock && obj.number > 1){
+                  obj.number = parseInt(obj.number) - 1;
+              }
+          }else{
+              if(obj.number < obj.sku.stock){
+                  obj.number = parseInt(obj.number) + 1;
+              }
+          }
+        },
         //请求列表全部数据
         getAjax (transition) {
-          this.$http.get('../../src/mock/cart/list.json')
+          this.$http.get(configPath + 'cart/list.json')
           .then(response => {
             let json = response.data
             this.$route.router.app.loading = false
@@ -226,25 +240,20 @@
           })
         },
         //删除商品
-        delGoodEvent(obj){
-          this.createConfirm('确定要删除这个商品吗', this.opencallback)
+        delGoodEvent (item, shop) {
+          this.createConfirm('确定要删除这个商品吗', () => {
+           this.$http.get(configPath + 'cart/list.json')
+            .then(response => {
+              shop.$remove(item)
+            })
+            .catch(response => {
+              console.log(response)
+            })
+          })
         },
         //结算按钮
         setEvent(){
 
-        },
-        //确定删除callback
-        opencallback(){
-           this.$http.get('../../src/mock/cart/list.json')
-            .then(response => {
-              const json = response.data
-              if(json&&json.status.code==1001){
-                this.closeConfirm()
-              }
-           })
-            .catch(response => {
-              console.log(response)
-           })
         }
       }
   }

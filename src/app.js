@@ -2,13 +2,16 @@ import Vue from 'vue'
 import VueRouter from 'vue-router'
 import VueResource from 'vue-resource'
 import App from './app.vue'
-
 //消息提醒
 import Toast from 'vue-toast-mobile'
 window.Toast = Toast
 
 Vue.use(VueRouter)
 Vue.use(VueResource)
+
+//配置前端请求路径
+const configPath = '/src/mock/'
+window. configPath = configPath
 
 Vue.http.options.headers = {
 	'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'
@@ -29,7 +32,6 @@ const router = new VueRouter({
 })
 
 require('./routers')(router);
-
-router.start(App,'#app');
+router.start(App,'app');
 
 
